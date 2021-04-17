@@ -33,8 +33,6 @@ namespace InlineWatch
         /// </summary>
         private readonly Pen pen;
 
-        private DebuggerCallback debuggerCallback;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TextAdornment1"/> class.
         /// </summary>
@@ -47,7 +45,7 @@ namespace InlineWatch
             this.layer = view.GetAdornmentLayer("TextAdornment1");
 
             this.view = view;
-            this.view.LayoutChanged += this.OnLayoutChanged;
+            DebuggerCallback.Instance.LocalsChangedEvent += (sender, args) => HandleDebuggerLocalsChanged(args);
 
             // Create the pen and brush to color the box behind the a's
             this.brush = new SolidColorBrush(Color.FromArgb(0x20, 0x00, 0x00, 0xff));
@@ -57,6 +55,36 @@ namespace InlineWatch
             penBrush.Freeze();
             this.pen = new Pen(penBrush, 0.5);
             this.pen.Freeze();
+        }
+
+        private void HandleDebuggerLocalsChanged(LocalsChangedEventArgs args) {
+            if (view.TextSnapshot.LineCount < args.lineNumber) { // TODO: replace with file comparison to filename in args.
+                return;
+            }
+
+            this.layer.RemoveAllAdornments();
+            ITextSnapshotLine line = view.TextSnapshot.GetLineFromLineNumber((int)args.lineNumber - 1);
+            SnapshotSpan span = new SnapshotSpan(line.End, line.End);
+
+            IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
+            Geometry geometry = textViewLines.GetMarkerGeometry(span);
+            if (geometry != null) {
+                var drawing = new GeometryDrawing(this.brush, this.pen, geometry);
+                drawing.Freeze();
+
+                var drawingImage = new DrawingImage(drawing);
+                drawingImage.Freeze();
+
+                var image = new Image
+                {
+                    Source = drawingImage,
+                };
+
+                // Align the image with the top of the bounds of the text geometry
+                Canvas.SetLeft(image, geometry.Bounds.Left);
+                Canvas.SetTop(image, geometry.Bounds.Top);
+                this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
+            }
         }
 
         /// <summary>

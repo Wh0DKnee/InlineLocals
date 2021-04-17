@@ -18,7 +18,6 @@ namespace InlineWatch
         }
 
         private ITagAggregator<WatchTag> watchTagAggr;
-
         private string filePath;
 
         private WatchAdornmentTagger(IWpfTextView view, ITagAggregator<WatchTag> watchTagAggr)
@@ -28,7 +27,7 @@ namespace InlineWatch
         }
 
         protected override WatchAdornment CreateAdornment(WatchTag watchTag, SnapshotSpan span) {
-            return new WatchAdornment();
+            return new WatchAdornment(watchTag);
         }
 
         protected override IEnumerable<Tuple<SnapshotSpan, PositionAffinity?, WatchTag>> GetAdornmentData(NormalizedSnapshotSpanCollection spans) {
@@ -54,7 +53,8 @@ namespace InlineWatch
         }
 
         protected override bool UpdateAdornment(WatchAdornment adornment, WatchTag watchTag) {
-            throw new NotImplementedException();
+            adornment.Update(watchTag);
+            return true;
         }
     }
 }

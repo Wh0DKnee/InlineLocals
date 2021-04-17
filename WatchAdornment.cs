@@ -13,7 +13,7 @@ namespace InlineWatch
     {
         private Rectangle rect;
 
-        internal WatchAdornment() {
+        internal WatchAdornment(WatchTag watchTag) {
             rect = new Rectangle() {
                 Stroke = Brushes.Black,
                 StrokeThickness = 1,
@@ -21,7 +21,7 @@ namespace InlineWatch
                 Height = 10
             };
 
-            Update();
+            Update(watchTag);
 
             Content = rect;
         }
@@ -33,7 +33,8 @@ namespace InlineWatch
             return brush;
         }
 
-        internal void Update() {
+        internal void Update(WatchTag watchTag) {
+            // TODO: update adornment based value stored in watchTag
             rect.Fill = MakeBrush();
         }
     }

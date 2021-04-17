@@ -61,6 +61,8 @@ namespace InlineWatch
             Assumes.Present(debugger);
             if (!(debugger is null)) {
                 debugger.AdviseDebugEventCallback(DebuggerCallback.Instance);
+            } else {
+                Console.WriteLine("Couldnt get debugger service.");
             }
 
             IVsSolution solution = GetService(typeof(SVsSolution)) as IVsSolution;
@@ -94,12 +96,15 @@ namespace InlineWatch
         }
 
         public int OnAfterOpenSolution(object pUnkReserved, int fNewSolution) {
-            // init stuff here
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            // init stuff here?
+            /*Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             IVsDebugger debugger = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger;
             if (!(debugger is null)) {
                 debugger.AdviseDebugEventCallback(DebuggerCallback.Instance);
-            }
+            } else {
+                Console.WriteLine("Couldnt get debugger service.");
+                return VSConstants.E_FAIL;
+            }*/
 
             return VSConstants.S_OK;
         }
