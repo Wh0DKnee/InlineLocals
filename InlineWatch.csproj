@@ -50,8 +50,6 @@
     <Compile Include="IntraTextAdornmentTagger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="InlineWatchPackage.cs" />
-    <Compile Include="TextAdornment1.cs" />
-    <Compile Include="TextAdornment1TextViewCreationListener.cs" />
     <Compile Include="WatchAdornment.cs" />
     <Compile Include="WatchAdornmenTaggerProvider.cs" />
     <Compile Include="WatchTag.cs" />

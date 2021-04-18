@@ -121,6 +121,8 @@ namespace InlineWatch
             string[] memberHierarchy = word.Split(new string[]{"."}, StringSplitOptions.RemoveEmptyEntries);
             return Contains(locals, memberHierarchy, 0, out value);
         }
+        
+        // Recursively traverse locals tree.
         private bool Contains(EnvDTE.Expressions locals, string[] memberHierarchy, int index, out string value) {
             foreach (EnvDTE.Expression local in locals) {
                 if (local.Name == memberHierarchy[index]) {
@@ -142,13 +144,13 @@ namespace InlineWatch
         /// text buffer changes (tags are updated when the debugger steps), so we force an internal call to GetTags 
         /// by simulating a buffer change with an empty edit. (I think this works)
         private void ForceUpdateBuffers() {
-        var fakeEdit = Buffer.CreateEdit();
-        fakeEdit.Apply();
+            var fakeEdit = Buffer.CreateEdit();
+            fakeEdit.Apply();
 
-        // We also invoke an AfterLocalsChangedEvent, which the WatchAdornmentTagger
-        // subscribes to, so that it knows that the tags have changed and it needs
-        // to update the corresponding adornments.
-        DebuggerCallback.Instance.InvokeAfterLocalsChangedEvent();
+            // We also invoke an AfterLocalsChangedEvent, which the WatchAdornmentTagger
+            // subscribes to, so that it knows that the tags have changed and it needs
+            // to update the corresponding adornments.
+            DebuggerCallback.Instance.InvokeAfterLocalsChangedEvent();
         }
 
         /// <summary>

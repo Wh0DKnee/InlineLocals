@@ -29,7 +29,7 @@ namespace InlineWatch
             return new WatchAdornment(watchTag);
         }
 
-        private void HandleAfterLocalsChanged(object sender) { // for now just, invalidate all spans
+        private void HandleAfterLocalsChanged(object sender) { // for now just invalidate all spans
             List<SnapshotSpan> spans = new List<SnapshotSpan>();
             SnapshotSpan entireSpan = new SnapshotSpan(view.TextBuffer.CurrentSnapshot, 0, view.TextBuffer.CurrentSnapshot.Length);
             spans.Add(entireSpan);
