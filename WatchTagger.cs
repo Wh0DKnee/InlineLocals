@@ -44,12 +44,7 @@ namespace InlineWatch
                 return;
             }
 
-            Dictionary<string, string> localsDict = new Dictionary<string, string>();
             EnvDTE.Expressions locals = stackFrame.Locals;
-            foreach (EnvDTE.Expression local in locals) {
-                localsDict[local.Name] = local.Value; 
-                // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
-            }
 
             TagSpans.Clear();
 
@@ -58,11 +53,12 @@ namespace InlineWatch
                 return;
             }
             int lastLineIndex = (int)stackFrame.LineNumber - 1; // TODO: calculate lastLine by matching the opening curly brace found by 
-                                                                // match in GetFunctionStartLineIndex()
+                                                                // match in GetFunctionStartLineIndex(). But do we want this behavior?
+                                                                // Probably best to implement and let the user decide in settings.
             for(int i = startLineIndex; i <= lastLineIndex; ++i) {
                 ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
                 string debugString = textSnapshotLine.GetText();
-                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(localsDict, textSnapshotLine);
+                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(locals, textSnapshotLine);
                 if(!(tagSpan is null)) {
                     TagSpans.Add(tagSpan);
                 }
@@ -103,34 +99,56 @@ namespace InlineWatch
             return sourceText.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private TagSpan<WatchTag> CreateTagSpanForLine(Dictionary<string, string> locals, ITextSnapshotLine snapshotLine) {
+        private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine) {
             string[] words = GetWords(snapshotLine.GetText());
-            string lineTagString = "";
+            string lineTagString = "  ";
             HashSet<string> addedLocals = new HashSet<string>(); // locals that have been added to the watch already
+            // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
             foreach (string word in words) {
-                if (locals.ContainsKey(word) && !addedLocals.Contains(word)) { // TODO: also check for word + "returned" to display values returned by function call.
-                    lineTagString += (word + ": " + locals[word] + " ");
+                string value;
+                if (Contains(locals, word, out value) && !addedLocals.Contains(word)) { // TODO: also check for word + "returned" to display values returned by function call.
+                    lineTagString += (word + ": " + value + "   ");
                     addedLocals.Add(word);
                 }
             }
-            if (lineTagString == "") {
+            if (lineTagString == "  ") {
                 return null;
             }
             return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(lineTagString));
         }
+
+        private bool Contains(EnvDTE.Expressions locals, string word, out string value) {
+            string[] memberHierarchy = word.Split(new string[]{"."}, StringSplitOptions.RemoveEmptyEntries);
+            return Contains(locals, memberHierarchy, 0, out value);
+        }
+        private bool Contains(EnvDTE.Expressions locals, string[] memberHierarchy, int index, out string value) {
+            foreach (EnvDTE.Expression local in locals) {
+                if (local.Name == memberHierarchy[index]) {
+                    if(index == memberHierarchy.Length - 1) {
+                        value = local.Value;
+                        return true;
+                    }
+                    return Contains(local.DataMembers, memberHierarchy, ++index, out value);
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
 
         /// <summary>
         /// Usually, GetTags will only be called if the text buffer changed. Our tag changes are independent of the
         /// text buffer changes (tags are updated when the debugger steps), so we force an internal call to GetTags 
         /// by simulating a buffer change with an empty edit. (I think this works)
         private void ForceUpdateBuffers() {
-            var fakeEdit = Buffer.CreateEdit();
-            fakeEdit.Apply();
+        var fakeEdit = Buffer.CreateEdit();
+        fakeEdit.Apply();
 
-            // We also invoke an AfterLocalsChangedEvent, which the WatchAdornmentTagger
-            // subscribes to, so that it knows that the tags have changed and it needs
-            // to update the corresponding adornments.
-            DebuggerCallback.Instance.InvokeAfterLocalsChangedEvent();
+        // We also invoke an AfterLocalsChangedEvent, which the WatchAdornmentTagger
+        // subscribes to, so that it knows that the tags have changed and it needs
+        // to update the corresponding adornments.
+        DebuggerCallback.Instance.InvokeAfterLocalsChangedEvent();
         }
 
         /// <summary>
@@ -139,6 +157,7 @@ namespace InlineWatch
         /// </summary>
         /// <param name="args">The buffer change arguments.</param>
         protected virtual void HandleBufferChanged(TextContentChangedEventArgs args) {
+            // TODO: Delete all this.
             if (args.Changes.Count == 0)
                 return;
 
