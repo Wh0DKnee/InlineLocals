@@ -47,7 +47,7 @@ namespace InlineWatch
             Dictionary<string, string> localsDict = new Dictionary<string, string>();
             EnvDTE.Expressions locals = stackFrame.Locals;
             foreach (EnvDTE.Expression local in locals) {
-                localsDict.Add(local.Name, local.Value);
+                localsDict[local.Name] = local.Value;
             }
 
             TagSpans.Clear();
@@ -66,6 +66,7 @@ namespace InlineWatch
                 }
             }
 
+            ForceUpdateBuffers();
             var temp = TagsChanged;
             if (temp == null)
                 return;
@@ -96,16 +97,18 @@ namespace InlineWatch
         }
 
         private string[] GetWords(string sourceText) {
-            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";" };
+            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";", "-", "+", "/", "*" };
             return sourceText.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         private TagSpan<WatchTag> CreateTagSpanForLine(Dictionary<string, string> locals, ITextSnapshotLine snapshotLine) {
             string[] words = GetWords(snapshotLine.GetText());
             string lineTagString = "";
+            HashSet<string> addedLocals = new HashSet<string>(); // locals that have been added to the watch already
             foreach (string word in words) {
-                if (locals.ContainsKey(word)) {
-                    lineTagString += (word + ": " + locals[word]);
+                if (locals.ContainsKey(word) && !addedLocals.Contains(word)) {
+                    lineTagString += (word + ": " + locals[word] + " ");
+                    addedLocals.Add(word);
                 }
             }
             if (lineTagString == "") {
