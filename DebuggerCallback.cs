@@ -10,14 +10,9 @@ using System.Threading.Tasks;
 
 namespace InlineWatch
 {
-    class LocalsChangedEventArgs
-    {
-        public string fileName;
-        public uint lineNumber;
-    }
     class DebuggerCallback : IDebugEventCallback2
     {
-        public delegate void LocalsChangedEventHandler(object sender, LocalsChangedEventArgs args);
+        public delegate void LocalsChangedEventHandler(object sender, StackFrame2 frame);
         public event LocalsChangedEventHandler LocalsChangedEvent = delegate{};
 
         public delegate void AfterLocalsChangedEventHandler(object sender);
@@ -31,6 +26,10 @@ namespace InlineWatch
 
         public int Event(IDebugEngine2 pEngine, IDebugProcess2 pProcess, IDebugProgram2 pProgram, IDebugThread2 pThread, IDebugEvent2 pEvent, ref Guid riidEvent, uint dwAttrib) {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            Guid debugExpressionsDirtyEventGuid = new Guid("ce6f92d3-4222-4b1e-830d-3ecff112bf22");
+            if (!debugExpressionsDirtyEventGuid.Equals(riidEvent)) {
+                return VSConstants.S_OK;
+            }
             EnvDTE.DTE DTE = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SDTE)) as EnvDTE.DTE;
             if (DTE == null) {
                 Console.WriteLine("Could not get DTE service.");
@@ -51,18 +50,11 @@ namespace InlineWatch
             }
             EnvDTE.Expressions locals = stackFrame.Locals;
             foreach (EnvDTE.Expression local in locals) {
-                EnvDTE.Expressions members = local.DataMembers;
-                
-                // Do this section recursively, looking down in each expression for 
-                // the next set of data members. This will build the tree.
-                // DataMembers is never null, instead just iterating over a 0-length list.
+                //EnvDTE.Expressions members = local.Name;
             }
 
             if(LocalsChanged()) {
-                LocalsChangedEventArgs args = new LocalsChangedEventArgs();
-                args.fileName = stackFrame.FileName;
-                args.lineNumber = stackFrame.LineNumber;
-                LocalsChangedEvent(this, args);
+                LocalsChangedEvent(this, stackFrame);
             }
 
             return VSConstants.S_OK;

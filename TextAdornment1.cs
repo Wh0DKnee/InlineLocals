@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Controls;
 using System.Windows.Media;
+using EnvDTE90a;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -57,13 +58,13 @@ namespace InlineWatch
             this.pen.Freeze();
         }
 
-        private void HandleDebuggerLocalsChanged(LocalsChangedEventArgs args) {
-            if (view.TextSnapshot.LineCount < args.lineNumber) { // TODO: replace with file comparison to filename in args.
+        private void HandleDebuggerLocalsChanged(StackFrame2 args) {
+            /*if (view.TextSnapshot.LineCount < args.LineNumber) { // TODO: replace with file comparison to filename in args.
                 return;
             }
 
             this.layer.RemoveAllAdornments();
-            ITextSnapshotLine line = view.TextSnapshot.GetLineFromLineNumber((int)args.lineNumber - 1);
+            ITextSnapshotLine line = view.TextSnapshot.GetLineFromLineNumber((int)args.LineNumber - 1);
             SnapshotSpan span = new SnapshotSpan(line.End, line.End);
 
             IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
@@ -84,7 +85,7 @@ namespace InlineWatch
                 Canvas.SetLeft(image, geometry.Bounds.Left);
                 Canvas.SetTop(image, geometry.Bounds.Top);
                 this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
-            }
+            }*/
         }
 
         /// <summary>

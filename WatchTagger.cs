@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using EnvDTE90a;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 
@@ -28,12 +29,6 @@ namespace InlineWatch
         #region ITagger implementation
 
         public virtual IEnumerable<ITagSpan<WatchTag>> GetTags(NormalizedSnapshotSpanCollection spans) {
-            /*ITextSnapshot snapshot = spans[0].Snapshot;
-            ITextSnapshotLine line = snapshot.GetLineFromLineNumber(0);
-            SnapshotSpan tmpSpan = new SnapshotSpan(line.End, 0);
-            TagSpan<WatchTag> tagSpan = new TagSpan<WatchTag>(tmpSpan, new WatchTag("hi"));
-            yield return tagSpan;*/
-
             foreach (var tagSpan in TagSpans) {
                 yield return tagSpan;
             }
@@ -42,16 +37,34 @@ namespace InlineWatch
 
         #endregion
 
-        private void HandleDebuggerLocalsChanged(LocalsChangedEventArgs args) {
+        private void HandleDebuggerLocalsChanged(StackFrame2 stackFrame) {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             string fileName = Helpers.GetPath(Buffer);
-            if(fileName != args.fileName) { // debugger is currently not in the file attached to this tagger
+            if(fileName != stackFrame.FileName) { // debugger is currently not in the file attached to this tagger
                 return;
             }
 
+            Dictionary<string, string> localsDict = new Dictionary<string, string>();
+            EnvDTE.Expressions locals = stackFrame.Locals;
+            foreach (EnvDTE.Expression local in locals) {
+                localsDict.Add(local.Name, local.Value);
+            }
+
             TagSpans.Clear();
-            ITextSnapshotLine line = Buffer.CurrentSnapshot.GetLineFromLineNumber((int)args.lineNumber);
-            SnapshotSpan span = new SnapshotSpan(line.Start, 0);
-            TagSpans.Add(new TagSpan<WatchTag>(span, new WatchTag("hi")));
+
+            int startLineIndex = GetFunctionStartLineIndex(stackFrame);
+            if(startLineIndex == -1) {
+                return;
+            }
+            int lastLineIndex = (int)stackFrame.LineNumber - 1;
+            for(int i = startLineIndex; i <= lastLineIndex; ++i) {
+                ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
+                string debugString = textSnapshotLine.GetText();
+                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(localsDict, textSnapshotLine);
+                if(!(tagSpan is null)) {
+                    TagSpans.Add(tagSpan);
+                }
+            }
 
             var temp = TagsChanged;
             if (temp == null)
@@ -60,6 +73,45 @@ namespace InlineWatch
             SnapshotSpan totalAffectedSpan = new SnapshotSpan(Buffer.CurrentSnapshot.GetLineFromLineNumber(0).Start,
                 Buffer.CurrentSnapshot.GetLineFromLineNumber(Buffer.CurrentSnapshot.LineCount - 1).End);
             temp(this, new SnapshotSpanEventArgs(totalAffectedSpan));
+        }
+
+        private int GetFunctionStartLineIndex(StackFrame2 stackFrame) {
+            Regex regex = new Regex(stackFrame.FunctionName + @"[\t\s]*\(.*\)[\t\s]*\{");
+
+            int currentLineIndex = (int)stackFrame.LineNumber - 1; // stack frame line number starts at 1, snapshot line numbers a 0, hence the -1
+            string sourceString = "";
+            Match match = null;
+            ITextSnapshotLine currentLine = null;
+            while(match is null || !match.Success) {
+                if(currentLineIndex < 0 || currentLineIndex >= Buffer.CurrentSnapshot.LineCount) {
+                    return -1; // TODO: probably better to return a bool and pass an int as out parameter
+                }
+                currentLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(currentLineIndex);
+                sourceString = currentLine.GetText() + sourceString;
+                match = regex.Match(sourceString);
+                --currentLineIndex;
+            }
+
+            return ++currentLineIndex; // a bit ugly with re-incrementing here, but it works I guess
+        }
+
+        private string[] GetWords(string sourceText) {
+            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";" };
+            return sourceText.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private TagSpan<WatchTag> CreateTagSpanForLine(Dictionary<string, string> locals, ITextSnapshotLine snapshotLine) {
+            string[] words = GetWords(snapshotLine.GetText());
+            string lineTagString = "";
+            foreach (string word in words) {
+                if (locals.ContainsKey(word)) {
+                    lineTagString += (word + ": " + locals[word]);
+                }
+            }
+            if (lineTagString == "") {
+                return null;
+            }
+            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(lineTagString));
         }
 
         /// <summary>
