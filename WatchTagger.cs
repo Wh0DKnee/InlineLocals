@@ -47,7 +47,8 @@ namespace InlineWatch
             Dictionary<string, string> localsDict = new Dictionary<string, string>();
             EnvDTE.Expressions locals = stackFrame.Locals;
             foreach (EnvDTE.Expression local in locals) {
-                localsDict[local.Name] = local.Value;
+                localsDict[local.Name] = local.Value; 
+                // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
             }
 
             TagSpans.Clear();
@@ -56,7 +57,8 @@ namespace InlineWatch
             if(startLineIndex == -1) {
                 return;
             }
-            int lastLineIndex = (int)stackFrame.LineNumber - 1;
+            int lastLineIndex = (int)stackFrame.LineNumber - 1; // TODO: calculate lastLine by matching the opening curly brace found by 
+                                                                // match in GetFunctionStartLineIndex()
             for(int i = startLineIndex; i <= lastLineIndex; ++i) {
                 ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
                 string debugString = textSnapshotLine.GetText();
@@ -106,7 +108,7 @@ namespace InlineWatch
             string lineTagString = "";
             HashSet<string> addedLocals = new HashSet<string>(); // locals that have been added to the watch already
             foreach (string word in words) {
-                if (locals.ContainsKey(word) && !addedLocals.Contains(word)) {
+                if (locals.ContainsKey(word) && !addedLocals.Contains(word)) { // TODO: also check for word + "returned" to display values returned by function call.
                     lineTagString += (word + ": " + locals[word] + " ");
                     addedLocals.Add(word);
                 }
