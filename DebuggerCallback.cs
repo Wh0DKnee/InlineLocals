@@ -12,16 +12,16 @@ namespace InlineWatch
 {
     class LocalsChangedEventArgs
     {
+        public string fileName;
         public uint lineNumber;
     }
     class DebuggerCallback : IDebugEventCallback2
     {
-        // TODO: create an event that every tagger subscribes to,
-        // we then fire the event when the locals changed, and supply
-        // the fileName of the debugged file. That way, taggers of 
-        // another file can ignore the event.
         public delegate void LocalsChangedEventHandler(object sender, LocalsChangedEventArgs args);
         public event LocalsChangedEventHandler LocalsChangedEvent = delegate{};
+
+        public delegate void AfterLocalsChangedEventHandler(object sender);
+        public event AfterLocalsChangedEventHandler AfterLocalsChangedEvent = delegate{};
 
         private static readonly Lazy<DebuggerCallback> lazy =
             new Lazy<DebuggerCallback> (() => new DebuggerCallback());
@@ -49,7 +49,6 @@ namespace InlineWatch
                 Console.WriteLine("CurrentStackFrame is not a StackFrame2.");
                 return VSConstants.E_UNEXPECTED;
             }
-            var lineNumber = stackFrame.LineNumber;
             EnvDTE.Expressions locals = stackFrame.Locals;
             foreach (EnvDTE.Expression local in locals) {
                 EnvDTE.Expressions members = local.DataMembers;
@@ -61,7 +60,8 @@ namespace InlineWatch
 
             if(LocalsChanged()) {
                 LocalsChangedEventArgs args = new LocalsChangedEventArgs();
-                args.lineNumber = lineNumber;
+                args.fileName = stackFrame.FileName;
+                args.lineNumber = stackFrame.LineNumber;
                 LocalsChangedEvent(this, args);
             }
 
@@ -70,6 +70,10 @@ namespace InlineWatch
 
         private bool LocalsChanged() {
             return true; // TODO: properly implement so we dont send out updates when it's not needed
+        }
+
+        public void InvokeAfterLocalsChangedEvent() {
+            AfterLocalsChangedEvent(this);
         }
     }
 }

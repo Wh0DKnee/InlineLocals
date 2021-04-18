@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
@@ -12,8 +13,12 @@ namespace InlineWatch
     internal static class Helpers
     {
         public static string GetPath(this IWpfTextView textView) {
+            return GetPath(textView.TextBuffer);
+        }
+
+        public static string GetPath(this ITextBuffer buffer) {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            textView.TextBuffer.Properties.TryGetProperty(typeof(IVsTextBuffer), out IVsTextBuffer bufferAdapter);
+            buffer.Properties.TryGetProperty(typeof(IVsTextBuffer), out IVsTextBuffer bufferAdapter);
             var persistFileFormat = bufferAdapter as IPersistFileFormat;
 
             if (persistFileFormat == null) {

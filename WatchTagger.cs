@@ -21,35 +21,36 @@ namespace InlineWatch
 
         public WatchTagger(ITextBuffer buffer) {
 
-            //buffer.Changed += (sender, args) => HandleBufferChanged(args);
+            buffer.Changed += (sender, args) => HandleBufferChanged(args);
             this.Buffer = buffer;
             DebuggerCallback.Instance.LocalsChangedEvent += (sender, args) => HandleDebuggerLocalsChanged(args);
         }
         #region ITagger implementation
 
         public virtual IEnumerable<ITagSpan<WatchTag>> GetTags(NormalizedSnapshotSpanCollection spans) {
-            ITextSnapshot snapshot = spans[0].Snapshot;
+            /*ITextSnapshot snapshot = spans[0].Snapshot;
             ITextSnapshotLine line = snapshot.GetLineFromLineNumber(0);
             SnapshotSpan tmpSpan = new SnapshotSpan(line.End, 0);
             TagSpan<WatchTag> tagSpan = new TagSpan<WatchTag>(tmpSpan, new WatchTag("hi"));
-            yield return tagSpan;
+            yield return tagSpan;*/
 
-            /*foreach (var tagSpan in TagSpans) {
+            foreach (var tagSpan in TagSpans) {
                 yield return tagSpan;
-            }*/
+            }
         }
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 
         #endregion
 
         private void HandleDebuggerLocalsChanged(LocalsChangedEventArgs args) {
-            if(Buffer.CurrentSnapshot.LineCount <= args.lineNumber) { // TODO: replace with file comparison to filename in args.
+            string fileName = Helpers.GetPath(Buffer);
+            if(fileName != args.fileName) { // debugger is currently not in the file attached to this tagger
                 return;
             }
 
-            /*TagSpans.Clear();
+            TagSpans.Clear();
             ITextSnapshotLine line = Buffer.CurrentSnapshot.GetLineFromLineNumber((int)args.lineNumber);
-            SnapshotSpan span = new SnapshotSpan(line.Start, line.End);
+            SnapshotSpan span = new SnapshotSpan(line.Start, 0);
             TagSpans.Add(new TagSpan<WatchTag>(span, new WatchTag("hi")));
 
             var temp = TagsChanged;
@@ -58,7 +59,21 @@ namespace InlineWatch
 
             SnapshotSpan totalAffectedSpan = new SnapshotSpan(Buffer.CurrentSnapshot.GetLineFromLineNumber(0).Start,
                 Buffer.CurrentSnapshot.GetLineFromLineNumber(Buffer.CurrentSnapshot.LineCount - 1).End);
-            temp(this, new SnapshotSpanEventArgs(totalAffectedSpan));*/
+            temp(this, new SnapshotSpanEventArgs(totalAffectedSpan));
+        }
+
+        /// <summary>
+        /// Usually, GetTags will only be called if the text buffer changed. Our tag changes are independent of the
+        /// text buffer changes (tags are updated when the debugger steps), so we force an internal call to GetTags 
+        /// by simulating a buffer change with an empty edit. (I think this works)
+        private void ForceUpdateBuffers() {
+            var fakeEdit = Buffer.CreateEdit();
+            fakeEdit.Apply();
+
+            // We also invoke an AfterLocalsChangedEvent, which the WatchAdornmentTagger
+            // subscribes to, so that it knows that the tags have changed and it needs
+            // to update the corresponding adornments.
+            DebuggerCallback.Instance.InvokeAfterLocalsChangedEvent();
         }
 
         /// <summary>

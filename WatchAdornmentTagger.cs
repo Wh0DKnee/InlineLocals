@@ -24,10 +24,18 @@ namespace InlineWatch
            : base(view) {
             this.watchTagAggr = watchTagAggr;
             filePath = Helpers.GetPath(view);
+            DebuggerCallback.Instance.AfterLocalsChangedEvent += HandleAfterLocalsChanged;
         }
 
         protected override WatchAdornment CreateAdornment(WatchTag watchTag, SnapshotSpan span) {
             return new WatchAdornment(watchTag);
+        }
+
+        private void HandleAfterLocalsChanged(object sender) { // for now just, invalidate all spans
+            List<SnapshotSpan> spans = new List<SnapshotSpan>();
+            SnapshotSpan entireSpan = new SnapshotSpan(view.TextBuffer.CurrentSnapshot, 0, view.TextBuffer.CurrentSnapshot.Length);
+            spans.Add(entireSpan);
+            InvalidateSpans(spans);
         }
 
         protected override IEnumerable<Tuple<SnapshotSpan, PositionAffinity?, WatchTag>> GetAdornmentData(NormalizedSnapshotSpanCollection spans) {
