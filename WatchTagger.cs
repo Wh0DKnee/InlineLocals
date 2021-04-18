@@ -28,9 +28,15 @@ namespace InlineWatch
         #region ITagger implementation
 
         public virtual IEnumerable<ITagSpan<WatchTag>> GetTags(NormalizedSnapshotSpanCollection spans) {
-            foreach(var tagSpan in TagSpans) {
+            ITextSnapshot snapshot = spans[0].Snapshot;
+            ITextSnapshotLine line = snapshot.GetLineFromLineNumber(0);
+            SnapshotSpan tmpSpan = new SnapshotSpan(line.End, 0);
+            TagSpan<WatchTag> tagSpan = new TagSpan<WatchTag>(tmpSpan, new WatchTag("hi"));
+            yield return tagSpan;
+
+            /*foreach (var tagSpan in TagSpans) {
                 yield return tagSpan;
-            }
+            }*/
         }
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 

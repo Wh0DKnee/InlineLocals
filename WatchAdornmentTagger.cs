@@ -31,6 +31,10 @@ namespace InlineWatch
         }
 
         protected override IEnumerable<Tuple<SnapshotSpan, PositionAffinity?, WatchTag>> GetAdornmentData(NormalizedSnapshotSpanCollection spans) {
+            /*ITextSnapshotLine line = view.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(0);
+            SnapshotSpan tmpSpan = new SnapshotSpan(line.End, 0);
+            yield return Tuple.Create(tmpSpan, (PositionAffinity?)PositionAffinity.Successor, new WatchTag(null));*/
+
             if (spans.Count == 0)
                 yield break;
 
