@@ -6,7 +6,7 @@ using EnvDTE90a;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     /// <summary>
     /// Helper base class for writing simple taggers based on regular expressions.

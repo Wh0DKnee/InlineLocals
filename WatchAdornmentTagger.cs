@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Utilities;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     internal sealed class WatchAdornmentTagger : IntraTextAdornmentTagger<WatchTag, WatchAdornment>
     {

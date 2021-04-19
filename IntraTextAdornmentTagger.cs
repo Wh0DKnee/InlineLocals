@@ -17,7 +17,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     /// <summary>
     /// Helper class for interspersing adornments into text.

@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("text")]

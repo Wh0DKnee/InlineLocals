@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Text.Tagging;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     class WatchTag : ITag
     {

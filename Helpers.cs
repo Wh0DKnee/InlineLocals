@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace InlineWatch
+namespace InlineLocals
 {
     internal static class Helpers
     {
