@@ -39,7 +39,7 @@ namespace InlineLocals
             this.IsReadOnlyCaretVisible = false;
             TranslateTransform tt = new TranslateTransform(20.0, 0.0);
             this.RenderTransform = tt;
-
+            this.Cursor = Cursors.Hand;
             
 
             //this.Padding = new Thickness(-0.15);

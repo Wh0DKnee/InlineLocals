@@ -127,7 +127,7 @@ namespace InlineLocals
             foreach (EnvDTE.Expression local in locals) {
                 if (local.Name == memberHierarchy[index]) {
                     if(index == memberHierarchy.Length - 1) {
-                        value = CreateValueString(local); // TODO: read comment above CreateValueString method
+                        value = local.Value;
                         return true;
                     }
                     return Contains(local.DataMembers, memberHierarchy, ++index, out value);
@@ -152,7 +152,7 @@ namespace InlineLocals
         private string CreateValueString(EnvDTE.Expression local) {
             bool isCollection = false;
             string collectionValues = "{";
-            int maxCollectionValuesToShow = 15;
+            int maxCollectionValuesToShow = 10;
             Regex regex = new Regex(@"\[([0-9]+)\]");
             foreach (EnvDTE.Expression expr in local.DataMembers) {
                 Match match = regex.Match(expr.Name);
