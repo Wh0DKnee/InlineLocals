@@ -127,7 +127,7 @@ namespace InlineLocals
             foreach (EnvDTE.Expression local in locals) {
                 if (local.Name == memberHierarchy[index]) {
                     if(index == memberHierarchy.Length - 1) {
-                        value = local.Value;
+                        value = CreateValueString(local); // TODO: read comment above CreateValueString method
                         return true;
                     }
                     return Contains(local.DataMembers, memberHierarchy, ++index, out value);
@@ -138,11 +138,46 @@ namespace InlineLocals
             return false;
         }
 
+        // This only does work on collections, i.e. locals that have a child that matches the regex [[0-9]*]
+        // for which it changes the value string from "{size = 5}" to the actual list contents.
+        // However, this is pretty expensive, and finding out if a local is a collection takes
+        // O(n), so maybe we should only call this function when the user hovers over the local
+        // and then change the displayed value to the collection.
+        //
+        // TODO: This sometimes fails for maps/dictionaries. Say we have the map {{1,2} {2,3}}, then
+        // this will show {2,3} because we have a child [1] with value 2 and a child [2] with value 3.
+        // Instead of defining a collection as a local that has a child matching [[0-9]*], we should
+        // probably have a list of types for which we apply this method (vector, arrays, lists, etc), but
+        // there a quite a few collection types in C# and C++...
+        private string CreateValueString(EnvDTE.Expression local) {
+            bool isCollection = false;
+            string collectionValues = "{";
+            int maxCollectionValuesToShow = 15;
+            Regex regex = new Regex(@"\[([0-9]+)\]");
+            foreach (EnvDTE.Expression expr in local.DataMembers) {
+                Match match = regex.Match(expr.Name);
+                if (match.Success) {
+                    if(Int32.Parse(match.Groups[1].Value) >= maxCollectionValuesToShow) {
+                        return collectionValues += "...}";
+                    }
+                    isCollection = true;
+                    collectionValues += expr.Value + ", ";
+                }
+            }
+            if (isCollection) {
+                collectionValues = collectionValues.Substring(0, collectionValues.Length - 2);
+                collectionValues += "}";
+                return collectionValues;
+            }
+            return local.Value;
+        }
+
 
         /// <summary>
         /// Usually, GetTags will only be called if the text buffer changed. Our tag changes are independent of the
         /// text buffer changes (tags are updated when the debugger steps), so we force an internal call to GetTags 
         /// by simulating a buffer change with an empty edit. (I think this works)
+        /// </summary>
         private void ForceUpdateBuffers() {
             var fakeEdit = Buffer.CreateEdit();
             fakeEdit.Apply();

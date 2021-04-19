@@ -22,20 +22,27 @@ namespace InlineLocals
     // we could add different behavior based on the represented data type, for example
     // when hovering. The default view for a vector could be "vi: {size=5}", but when you
     // hover the button, it changes to "vi: {1, 2, 3, 4, 5}".
-    class WatchAdornment : Button
+    class WatchAdornment : TextBox
     {
         internal WatchAdornment(WatchTag watchTag) {
-            Color backgroundColor = Colors.Gray;
-            backgroundColor.ScA = 0.12F;
+            Color backgroundColor = Colors.DarkGray;
+            backgroundColor.ScA = 0.0F;
             this.Background = MakeBrush(backgroundColor);
 
             this.Foreground = MakeBrush(Colors.LightGray);
 
-            Color foregroundColor = Colors.Black;
-            foregroundColor.ScA = 0.12F;
-            this.BorderBrush = MakeBrush(foregroundColor);
+            Color borderColor = Colors.DarkGray;
+            borderColor.ScA = 0.0F;
+            this.BorderBrush = MakeBrush(borderColor);
+            this.FontStyle = FontStyles.Italic;
+            this.IsReadOnly = true;
+            this.IsReadOnlyCaretVisible = false;
+            TranslateTransform tt = new TranslateTransform(20.0, 0.0);
+            this.RenderTransform = tt;
 
-            this.Padding = new Thickness(-0.15);
+            
+
+            //this.Padding = new Thickness(-0.15);
 
             double outFontSize = 0;
             if (TryGetFontSize(ref outFontSize)) {
@@ -57,8 +64,8 @@ namespace InlineLocals
         }
 
         internal void Update(WatchTag watchTag) {
-
-            Content = watchTag.WatchValue;
+            this.Text = watchTag.WatchValue;
+            //Content = watchTag.WatchValue;
         }
 
         bool TryGetFontSize(ref double size) {
