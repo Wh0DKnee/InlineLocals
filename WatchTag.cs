@@ -19,10 +19,10 @@ namespace InlineLocals
         /// This separation provides the potential for other extensions to consume watch tags
         /// and provide alternative UI or other derived functionality over this data.
         /// </remarks>
-        internal WatchTag(string watchValue) {
-            WatchValue = watchValue;
+        internal WatchTag(List<string> localValues) {
+            LocalValues = localValues;
         }
 
-        internal readonly string WatchValue;
+        internal readonly List<string> LocalValues;
     }
 }

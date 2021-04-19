@@ -100,21 +100,21 @@ namespace InlineLocals
         }
 
         private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine) {
+            List<string> localsStrings = new List<string>();
             string[] words = GetWords(snapshotLine.GetText());
-            string lineTagString = "  ";
             HashSet<string> addedLocals = new HashSet<string>(); // locals that have been added to the watch already
             // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
             foreach (string word in words) {
                 string value;
                 if (Contains(locals, word, out value) && !addedLocals.Contains(word)) { // TODO: also check for word + "returned" to display values returned by function call.
-                    lineTagString += (word + ": " + value + "   ");
+                    localsStrings.Add(word + ": " + value);
                     addedLocals.Add(word);
                 }
             }
-            if (lineTagString == "  ") {
+            if (addedLocals.Count == 0) {
                 return null;
             }
-            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(lineTagString));
+            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsStrings));
         }
 
         private bool Contains(EnvDTE.Expressions locals, string word, out string value) {

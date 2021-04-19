@@ -22,26 +22,9 @@ namespace InlineLocals
     // we could add different behavior based on the represented data type, for example
     // when hovering. The default view for a vector could be "vi: {size=5}", but when you
     // hover the button, it changes to "vi: {1, 2, 3, 4, 5}".
-    class WatchAdornment : TextBox
+    class WatchAdornment : ContentControl
     {
         internal WatchAdornment(WatchTag watchTag) {
-            Color backgroundColor = Colors.DarkGray;
-            backgroundColor.ScA = 0.0F;
-            this.Background = MakeBrush(backgroundColor);
-
-            this.Foreground = MakeBrush(Colors.LightGray);
-
-            Color borderColor = Colors.DarkGray;
-            borderColor.ScA = 0.0F;
-            this.BorderBrush = MakeBrush(borderColor);
-            this.FontStyle = FontStyles.Italic;
-            this.IsReadOnly = true;
-            this.IsReadOnlyCaretVisible = false;
-            TranslateTransform tt = new TranslateTransform(20.0, 0.0);
-            this.RenderTransform = tt;
-            this.Cursor = Cursors.Hand;
-            
-
             //this.Padding = new Thickness(-0.15);
 
             double outFontSize = 0;
@@ -64,8 +47,35 @@ namespace InlineLocals
         }
 
         internal void Update(WatchTag watchTag) {
-            this.Text = watchTag.WatchValue;
-            //Content = watchTag.WatchValue;
+            StackPanel stackPanel = new StackPanel();
+            stackPanel.Orientation = Orientation.Horizontal;
+            TranslateTransform tt = new TranslateTransform(20.0, 0.0);
+            stackPanel.RenderTransform = tt;
+            foreach (string s in watchTag.LocalValues) {
+                TextBox textBox = CreateTextBox(s);
+                stackPanel.Children.Add(textBox);
+            }
+            this.Content = stackPanel;
+        }
+
+        private TextBox CreateTextBox(string s) {
+            TextBox textBox = new TextBox();
+            Color backgroundColor = Colors.DarkGray;
+            backgroundColor.ScA = 0.0F;
+            textBox.Background = MakeBrush(backgroundColor);
+
+            textBox.Foreground = MakeBrush(Colors.LightGray);
+
+            Color borderColor = Colors.DarkGray;
+            borderColor.ScA = 0.2F;
+            textBox.BorderBrush = MakeBrush(borderColor);
+            textBox.FontStyle = FontStyles.Italic;
+            textBox.IsReadOnly = true;
+            textBox.IsReadOnlyCaretVisible = false;
+            
+            textBox.Cursor = Cursors.Hand;
+            textBox.Text = " " + s + " ";
+            return textBox;
         }
 
         bool TryGetFontSize(ref double size) {
