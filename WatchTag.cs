@@ -19,10 +19,12 @@ namespace InlineLocals
         /// This separation provides the potential for other extensions to consume watch tags
         /// and provide alternative UI or other derived functionality over this data.
         /// </remarks>
-        internal WatchTag(Dictionary<string, string> locals) {
+        internal WatchTag(Dictionary<string, string> locals, int offset) {
             Locals = locals;
+            Offset = offset;
         }
 
         internal readonly Dictionary<string, string> Locals;
+        internal readonly int Offset;
     }
 }

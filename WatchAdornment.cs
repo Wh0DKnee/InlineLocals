@@ -29,8 +29,8 @@ namespace InlineLocals
             //this.Padding = new Thickness(-0.15);
 
             double outFontSize = 0;
-            if (TryGetFontSize(ref outFontSize)) {
-                this.FontSize = outFontSize + 2;
+            if (Helpers.TryGetFontSize(ref outFontSize)) {
+                this.FontSize = outFontSize + 1;
             }
 
             Update(watchTag);
@@ -38,7 +38,7 @@ namespace InlineLocals
 
         protected override void OnMouseEnter(MouseEventArgs e) {
             base.OnMouseEnter(e);
-            // TODO: Use Command (find in view->other windows->command explorer) to execute vsix pinned inline local window
+            // TODO: show tooltip displaying local type on hover
         }
 
         private Brush MakeBrush(Color color) {
@@ -48,14 +48,18 @@ namespace InlineLocals
         }
 
         internal void Update(WatchTag watchTag) {
+            if (watchTag.Locals.Count == 0) {
+                return;
+            }
+
             StackPanel stackPanel = new StackPanel();
             stackPanel.Orientation = Orientation.Horizontal;
-            TranslateTransform tt = new TranslateTransform(20.0, 0.0);
-            stackPanel.RenderTransform = tt;
             foreach (var s in watchTag.Locals) {
                 TextBox textBox = CreateTextBox(s);
                 stackPanel.Children.Add(textBox);
             }
+            var first = stackPanel.Children[0] as TextBox;
+            first.Margin = new Thickness(20 + watchTag.Offset, 0, 0, 0);
             this.Content = stackPanel;
         }
 
@@ -66,14 +70,14 @@ namespace InlineLocals
 
         private TextBox CreateTextBox(KeyValuePair<string,string> local) {
             TextBox textBox = new TextBox();
-            Color backgroundColor = Colors.DarkGray;
+            Color backgroundColor = Colors.DarkSalmon;
             backgroundColor.ScA = 0.0F;
             textBox.Background = MakeBrush(backgroundColor);
 
             textBox.Foreground = MakeBrush(Colors.LightGray);
 
             Color borderColor = Colors.DarkGray;
-            borderColor.ScA = 0.2F;
+            borderColor.ScA = 0.0F;
             textBox.BorderBrush = MakeBrush(borderColor);
             textBox.FontStyle = FontStyles.Italic;
             textBox.IsReadOnly = true;
@@ -82,6 +86,11 @@ namespace InlineLocals
             textBox.Tag = local;
             textBox.Cursor = Cursors.Hand;
             textBox.Text = " " + local.Key + ": " + local.Value + " ";
+
+            double outFontSize = 0;
+            if (Helpers.TryGetFontSize(ref outFontSize)) {
+                textBox.FontSize = outFontSize + 1;
+            }
 
             textBox.PreviewMouseLeftButtonUp += HandleTextBoxMouseLeftButtonUp;
 
@@ -101,22 +110,6 @@ namespace InlineLocals
 
             KeyValuePair<string, string> local = (KeyValuePair<string, string>) textBox.Tag;
             dte.ExecuteCommand("Debug.AddWatch " + local.Key);
-        }
-
-        bool TryGetFontSize(ref double size) {
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            EnvDTE.DTE DTE = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SDTE)) as EnvDTE.DTE;
-            if (DTE is null)
-                return false;
-            EnvDTE.Properties propertiesList = DTE.get_Properties("FontsAndColors", "TextEditor");
-            if (propertiesList is null)
-                return false;
-            Property prop = propertiesList.Item("FontSize");
-            if (prop is null)
-                return false;
-            int fontSize = (System.Int16)prop.Value;
-            size = (double)fontSize;
-            return true;
         }
     }
 }

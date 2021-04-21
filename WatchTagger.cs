@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using EnvDTE90a;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
@@ -62,16 +64,36 @@ namespace InlineLocals
             int lastLineIndex = (int)stackFrame.LineNumber - 1; // TODO: calculate lastLine by matching the opening curly brace found by 
                                                                 // match in GetFunctionStartLineIndex(). But do we want this behavior?
                                                                 // Probably best to implement and let the user decide in settings.
+
+            int longestLineWidth = GetLongestLineWidth(Buffer.CurrentSnapshot, startLineIndex, lastLineIndex);
             for(int i = startLineIndex; i <= lastLineIndex; ++i) {
                 ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
                 string debugString = textSnapshotLine.GetText();
-                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(locals, textSnapshotLine);
+                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(locals, textSnapshotLine, longestLineWidth);
                 if(!(tagSpan is null)) {
                     TagSpans.Add(tagSpan);
                 }
             }
 
             ForceUpdateBuffers();
+        }
+
+        private int GetLongestLineWidth(ITextSnapshot snapshot, int firstLineIndex, int lastLineIndex) {
+            int longestWidth = 0;
+            for (int i = firstLineIndex; i <= lastLineIndex; ++i) {
+                ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
+                longestWidth = Math.Max(GetLineWidth(textSnapshotLine.GetText()), longestWidth);
+            }
+            return longestWidth;
+        }
+
+        private int GetLineWidth(string line) {
+            Font font = null;
+            if (!Helpers.TryGetFont(ref font)) {
+                return 0; // TODO: dont silently fail
+            }
+
+            return TextRenderer.MeasureText(line, font).Width;
         }
 
         private int GetFunctionStartLineIndex(StackFrame2 stackFrame) {
@@ -95,14 +117,16 @@ namespace InlineLocals
         }
 
         private string[] GetWords(string sourceText) {
-            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";", "-", "+", "/", "*" };
+            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";", "-", "+", "/", "*", "," };
             return sourceText.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine) {
+        private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine, int longestLineWidth) {
             Dictionary<string, string> localsDict = new Dictionary<string, string>();
             // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
-            string[] words = GetWords(snapshotLine.GetText());
+
+            string lineText = snapshotLine.GetText();
+            string[] words = GetWords(lineText);
             foreach (string word in words) {
                 string value;
                 if (Contains(locals, word, out value)) { // TODO: also check for word + "returned" to display values returned by function call.
@@ -112,7 +136,9 @@ namespace InlineLocals
             if (localsDict.Count == 0) {
                 return null;
             }
-            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsDict));
+
+            longestLineWidth = 0; // disabling this for now, doesnt quite work yet.
+            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsDict, longestLineWidth));
         }
 
         private bool Contains(EnvDTE.Expressions locals, string word, out string value) {

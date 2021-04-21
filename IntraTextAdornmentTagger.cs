@@ -41,7 +41,7 @@ namespace InlineLocals
         protected IntraTextAdornmentTagger(IWpfTextView view) {
             this.view = view;
             snapshot = view.TextBuffer.CurrentSnapshot;
-
+            
             this.view.LayoutChanged += HandleLayoutChanged;
             this.view.TextBuffer.Changed += HandleBufferChanged;
         }
