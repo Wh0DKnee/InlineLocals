@@ -12,6 +12,9 @@ namespace InlineLocals
 {
     class DebuggerCallback : IDebugEventCallback2
     {
+        public delegate void DebuggingStoppedEventHandler(object sender);
+        public event DebuggingStoppedEventHandler DebuggingStoppedEvent = delegate{};
+
         public delegate void LocalsChangedEventHandler(object sender, StackFrame2 frame);
         public event LocalsChangedEventHandler LocalsChangedEvent = delegate{};
 
@@ -27,6 +30,12 @@ namespace InlineLocals
         public int Event(IDebugEngine2 pEngine, IDebugProcess2 pProcess, IDebugProgram2 pProgram, IDebugThread2 pThread, IDebugEvent2 pEvent, ref Guid riidEvent, uint dwAttrib) {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             Guid debugExpressionsDirtyEventGuid = new Guid("ce6f92d3-4222-4b1e-830d-3ecff112bf22");
+            Guid debugSessionDestroyEventGuid = new Guid("f199b2c2-88fe-4c5d-a0fd-aa046b0dc0dc");
+
+            if (debugSessionDestroyEventGuid.Equals(riidEvent)) {
+                DebuggingStoppedEvent(this);
+                return VSConstants.S_OK;
+            }
             if (!debugExpressionsDirtyEventGuid.Equals(riidEvent)) {
                 return VSConstants.S_OK;
             }

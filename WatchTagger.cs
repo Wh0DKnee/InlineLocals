@@ -25,6 +25,7 @@ namespace InlineLocals
             buffer.Changed += (sender, args) => HandleBufferChanged(args);
             this.Buffer = buffer;
             DebuggerCallback.Instance.LocalsChangedEvent += (sender, args) => HandleDebuggerLocalsChanged(args);
+            DebuggerCallback.Instance.DebuggingStoppedEvent += (sender) => HandleDebuggingStopped();
         }
         #region ITagger implementation
 
@@ -36,6 +37,12 @@ namespace InlineLocals
         public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 
         #endregion
+
+        private void HandleDebuggingStopped() {
+            TagSpans.Clear();
+
+            ForceUpdateBuffers();
+        }
 
         private void HandleDebuggerLocalsChanged(StackFrame2 stackFrame) {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
@@ -65,13 +72,6 @@ namespace InlineLocals
             }
 
             ForceUpdateBuffers();
-            var temp = TagsChanged;
-            if (temp == null)
-                return;
-
-            SnapshotSpan totalAffectedSpan = new SnapshotSpan(Buffer.CurrentSnapshot.GetLineFromLineNumber(0).Start,
-                Buffer.CurrentSnapshot.GetLineFromLineNumber(Buffer.CurrentSnapshot.LineCount - 1).End);
-            temp(this, new SnapshotSpanEventArgs(totalAffectedSpan));
         }
 
         private int GetFunctionStartLineIndex(StackFrame2 stackFrame) {
@@ -100,21 +100,19 @@ namespace InlineLocals
         }
 
         private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine) {
-            List<string> localsStrings = new List<string>();
-            string[] words = GetWords(snapshotLine.GetText());
-            HashSet<string> addedLocals = new HashSet<string>(); // locals that have been added to the watch already
+            Dictionary<string, string> localsDict = new Dictionary<string, string>();
             // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
+            string[] words = GetWords(snapshotLine.GetText());
             foreach (string word in words) {
                 string value;
-                if (Contains(locals, word, out value) && !addedLocals.Contains(word)) { // TODO: also check for word + "returned" to display values returned by function call.
-                    localsStrings.Add(word + ": " + value);
-                    addedLocals.Add(word);
+                if (Contains(locals, word, out value)) { // TODO: also check for word + "returned" to display values returned by function call.
+                    localsDict[word] = value; // may override previous occurence, TODO: handle this (see above comment about when this occurs)
                 }
             }
-            if (addedLocals.Count == 0) {
+            if (localsDict.Count == 0) {
                 return null;
             }
-            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsStrings));
+            return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsDict));
         }
 
         private bool Contains(EnvDTE.Expressions locals, string word, out string value) {
@@ -179,6 +177,14 @@ namespace InlineLocals
         /// by simulating a buffer change with an empty edit. (I think this works)
         /// </summary>
         private void ForceUpdateBuffers() {
+            var temp = TagsChanged;
+            if (temp == null)
+                return;
+
+            SnapshotSpan totalAffectedSpan = new SnapshotSpan(Buffer.CurrentSnapshot.GetLineFromLineNumber(0).Start,
+                Buffer.CurrentSnapshot.GetLineFromLineNumber(Buffer.CurrentSnapshot.LineCount - 1).End);
+            temp(this, new SnapshotSpanEventArgs(totalAffectedSpan));
+
             var fakeEdit = Buffer.CreateEdit();
             fakeEdit.Apply();
 

@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Input;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft;
 
 namespace InlineLocals
 {
@@ -37,7 +38,7 @@ namespace InlineLocals
 
         protected override void OnMouseEnter(MouseEventArgs e) {
             base.OnMouseEnter(e);
-            // TODO: custom hover behavior?
+            // TODO: Use Command (find in view->other windows->command explorer) to execute vsix pinned inline local window
         }
 
         private Brush MakeBrush(Color color) {
@@ -51,14 +52,19 @@ namespace InlineLocals
             stackPanel.Orientation = Orientation.Horizontal;
             TranslateTransform tt = new TranslateTransform(20.0, 0.0);
             stackPanel.RenderTransform = tt;
-            foreach (string s in watchTag.LocalValues) {
+            foreach (var s in watchTag.Locals) {
                 TextBox textBox = CreateTextBox(s);
                 stackPanel.Children.Add(textBox);
             }
             this.Content = stackPanel;
         }
 
-        private TextBox CreateTextBox(string s) {
+        protected override void OnPreviewMouseLeftButtonUp(MouseButtonEventArgs e) {
+            base.OnPreviewMouseLeftButtonUp(e);
+            e.Handled = false;
+        }
+
+        private TextBox CreateTextBox(KeyValuePair<string,string> local) {
             TextBox textBox = new TextBox();
             Color backgroundColor = Colors.DarkGray;
             backgroundColor.ScA = 0.0F;
@@ -72,10 +78,29 @@ namespace InlineLocals
             textBox.FontStyle = FontStyles.Italic;
             textBox.IsReadOnly = true;
             textBox.IsReadOnlyCaretVisible = false;
-            
+
+            textBox.Tag = local;
             textBox.Cursor = Cursors.Hand;
-            textBox.Text = " " + s + " ";
+            textBox.Text = " " + local.Key + ": " + local.Value + " ";
+
+            textBox.PreviewMouseLeftButtonUp += HandleTextBoxMouseLeftButtonUp;
+
             return textBox;
+        }
+        private void HandleTextBoxMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            TextBox textBox = sender as TextBox;
+            if(textBox is null) {
+                return;
+            }
+
+            EnvDTE.DTE dte = (EnvDTE.DTE)Microsoft.VisualStudio.Shell.ServiceProvider.GlobalProvider.GetService(typeof(EnvDTE.DTE));
+            if(dte is null) {
+                return;
+            }
+
+            KeyValuePair<string, string> local = (KeyValuePair<string, string>) textBox.Tag;
+            dte.ExecuteCommand("Debug.AddWatch " + local.Key);
         }
 
         bool TryGetFontSize(ref double size) {

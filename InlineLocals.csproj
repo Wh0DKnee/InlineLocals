@@ -49,7 +49,7 @@
     <Compile Include="Helpers.cs" />
     <Compile Include="IntraTextAdornmentTagger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="InlineWatchPackage.cs" />
+    <Compile Include="InlineLocalsPackage.cs" />
     <Compile Include="WatchAdornment.cs" />
     <Compile Include="WatchAdornmenTaggerProvider.cs" />
     <Compile Include="WatchTag.cs" />
