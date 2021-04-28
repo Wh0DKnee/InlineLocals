@@ -92,7 +92,6 @@ namespace InlineLocals
             if (!Helpers.TryGetFont(ref font)) {
                 return 0; // TODO: dont silently fail
             }
-
             return TextRenderer.MeasureText(line, font).Width;
         }
 
@@ -122,15 +121,16 @@ namespace InlineLocals
         }
 
         private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine, int longestLineWidth) {
-            Dictionary<string, string> localsDict = new Dictionary<string, string>();
+            Dictionary<string, LocalInfo> localsDict = new Dictionary<string, LocalInfo>();
             // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
 
             string lineText = snapshotLine.GetText();
             string[] words = GetWords(lineText);
             foreach (string word in words) {
                 string value;
-                if (Contains(locals, word, out value)) { // TODO: also check for word + "returned" to display values returned by function call.
-                    localsDict[word] = value; // may override previous occurence, TODO: handle this (see above comment about when this occurs)
+                string type;
+                if (Contains(locals, word, out value, out type)) { // TODO: also check for word + "returned" to display values returned by function call.
+                    localsDict[word] = new LocalInfo(value, type); // may override previous occurence, TODO: handle this (see above comment about when this occurs)
                 }
             }
             if (localsDict.Count == 0) {
@@ -141,24 +141,26 @@ namespace InlineLocals
             return new TagSpan<WatchTag>(new SnapshotSpan(snapshotLine.End, 0), new WatchTag(localsDict, longestLineWidth));
         }
 
-        private bool Contains(EnvDTE.Expressions locals, string word, out string value) {
-            string[] memberHierarchy = word.Split(new string[]{"."}, StringSplitOptions.RemoveEmptyEntries);
-            return Contains(locals, memberHierarchy, 0, out value);
+        private bool Contains(EnvDTE.Expressions locals, string word, out string value, out string type) {
+            string[] memberHierarchy = word.Split(new string[]{".", "->"}, StringSplitOptions.RemoveEmptyEntries);
+            return Contains(locals, memberHierarchy, 0, out value, out type);
         }
         
         // Recursively traverse locals tree.
-        private bool Contains(EnvDTE.Expressions locals, string[] memberHierarchy, int index, out string value) {
+        private bool Contains(EnvDTE.Expressions locals, string[] memberHierarchy, int index, out string value, out string type) {
             foreach (EnvDTE.Expression local in locals) {
                 if (local.Name == memberHierarchy[index]) {
                     if(index == memberHierarchy.Length - 1) {
                         value = local.Value;
+                        type = local.Type;
                         return true;
                     }
-                    return Contains(local.DataMembers, memberHierarchy, ++index, out value);
+                    return Contains(local.DataMembers, memberHierarchy, ++index, out value, out type);
                 }
             }
 
             value = null;
+            type = null;
             return false;
         }
 

@@ -68,7 +68,7 @@ namespace InlineLocals
             e.Handled = false;
         }
 
-        private TextBox CreateTextBox(KeyValuePair<string,string> local) {
+        private TextBox CreateTextBox(KeyValuePair<string,LocalInfo> local) {
             TextBox textBox = new TextBox();
             Color backgroundColor = Colors.DarkSalmon;
             backgroundColor.ScA = 0.0F;
@@ -85,7 +85,11 @@ namespace InlineLocals
 
             textBox.Tag = local;
             textBox.Cursor = Cursors.Hand;
-            textBox.Text = " " + local.Key + ": " + local.Value + " ";
+            textBox.Text = " " + local.Key + ": " + local.Value.Value + " ";
+            ToolTip toolTip = new ToolTip();
+            toolTip.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            toolTip.Content = local.Value.Type;
+            textBox.ToolTip = toolTip;
 
             double outFontSize = 0;
             if (Helpers.TryGetFontSize(ref outFontSize)) {
@@ -108,7 +112,7 @@ namespace InlineLocals
                 return;
             }
 
-            KeyValuePair<string, string> local = (KeyValuePair<string, string>) textBox.Tag;
+            KeyValuePair<string, LocalInfo> local = (KeyValuePair<string, LocalInfo>) textBox.Tag;
             dte.ExecuteCommand("Debug.AddWatch " + local.Key);
         }
     }

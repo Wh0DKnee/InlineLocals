@@ -7,6 +7,16 @@ using Microsoft.VisualStudio.Text.Tagging;
 
 namespace InlineLocals
 {
+    class LocalInfo
+    {
+        internal LocalInfo(string value, string type) {
+            Value = value;
+            Type = type;
+        }
+
+        internal string Value;
+        internal string Type;
+    }
     class WatchTag : ITag
     {
         /// <summary>
@@ -19,12 +29,12 @@ namespace InlineLocals
         /// This separation provides the potential for other extensions to consume watch tags
         /// and provide alternative UI or other derived functionality over this data.
         /// </remarks>
-        internal WatchTag(Dictionary<string, string> locals, int offset) {
+        internal WatchTag(Dictionary<string, LocalInfo> locals, int offset) {
             Locals = locals;
             Offset = offset;
         }
 
-        internal readonly Dictionary<string, string> Locals;
+        internal readonly Dictionary<string, LocalInfo> Locals;
         internal readonly int Offset;
     }
 }
