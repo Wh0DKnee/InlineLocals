@@ -29,6 +29,10 @@ namespace InlineLocals
 
         public int Event(IDebugEngine2 pEngine, IDebugProcess2 pProcess, IDebugProgram2 pProgram, IDebugThread2 pThread, IDebugEvent2 pEvent, ref Guid riidEvent, uint dwAttrib) {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (!Globals.enabled)
+                return VSConstants.S_OK;
+
             Guid debugExpressionsDirtyEventGuid = new Guid("ce6f92d3-4222-4b1e-830d-3ecff112bf22");
             Guid debugSessionDestroyEventGuid = new Guid("f199b2c2-88fe-4c5d-a0fd-aa046b0dc0dc");
 
@@ -75,6 +79,10 @@ namespace InlineLocals
 
         public void InvokeAfterLocalsChangedEvent() {
             AfterLocalsChangedEvent(this);
+        }
+
+        public void InvokeDebuggingStoppedEvent() {
+            DebuggingStoppedEvent(this);
         }
     }
 }

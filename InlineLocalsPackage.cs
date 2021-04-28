@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.ComponentModel;
 using Microsoft;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
@@ -8,9 +9,23 @@ using Microsoft.VisualStudio.Shell.Interop;
 
 
 using Task = System.Threading.Tasks.Task;
+using System.Windows.Media;
 
 namespace InlineLocals
 {
+    public class OptionPageGrid : DialogPage
+    {
+        private Color colorOption = Colors.LightGray;
+
+        [Category("InlineLocals")]
+        [DisplayName("InlineLocals Text Color")]
+        [Description("The color that's used to display the inline loclas. Leave the initial \"FF\" as that is the opacity.")]
+        public Color ColorOption {
+            get { return colorOption; }
+            set { colorOption = value; }
+        }
+    }
+
     /// <summary>
     /// This is the class that implements the package exposed by this assembly.
     /// </summary>
@@ -31,12 +46,24 @@ namespace InlineLocals
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
     [Guid(InlineLocalsPackage.PackageGuidString)]
+    [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideOptionPage(typeof(OptionPageGrid),
+    "InlineLocals", "Options", 0, 0, true)]
     public sealed class InlineLocalsPackage : AsyncPackage, IVsSolutionEvents2
     {
         /// <summary>
         /// InlineWatchPackage GUID string.
         /// </summary>
         public const string PackageGuidString = "4fb5b72b-b60a-4906-8a89-12dbbdd14576";
+
+        public Color ColorOption 
+        {
+            get 
+            {
+                OptionPageGrid page = (OptionPageGrid)GetDialogPage(typeof(OptionPageGrid));
+                return page.ColorOption;
+            }
+        }
 
         #region Package Members
 
@@ -69,6 +96,7 @@ namespace InlineLocals
             Assumes.Present(solution);
             uint cookie = 0;
             solution.AdviseSolutionEvents(this, out cookie);
+    await ToggleOnOffCommand.InitializeAsync(this);
         }
 
         public int OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded) {

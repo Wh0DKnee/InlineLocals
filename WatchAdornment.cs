@@ -11,6 +11,7 @@ using System.Windows.Input;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft;
+using Microsoft.VisualStudio.Shell;
 
 namespace InlineLocals
 {
@@ -73,8 +74,7 @@ namespace InlineLocals
             Color backgroundColor = Colors.DarkSalmon;
             backgroundColor.ScA = 0.0F;
             textBox.Background = MakeBrush(backgroundColor);
-
-            textBox.Foreground = MakeBrush(Colors.LightGray);
+            textBox.Foreground = MakeBrush(GetFontColorFromOptions());
 
             Color borderColor = Colors.DarkGray;
             borderColor.ScA = 0.0F;
@@ -87,7 +87,7 @@ namespace InlineLocals
             textBox.Cursor = Cursors.Hand;
             textBox.Text = " " + local.Key + ": " + local.Value.Value + " ";
             ToolTip toolTip = new ToolTip();
-            toolTip.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            toolTip.Placement = System.Windows.Controls.Primitives.PlacementMode.Mouse;
             toolTip.Content = local.Value.Type;
             textBox.ToolTip = toolTip;
 
@@ -114,6 +114,19 @@ namespace InlineLocals
 
             KeyValuePair<string, LocalInfo> local = (KeyValuePair<string, LocalInfo>) textBox.Tag;
             dte.ExecuteCommand("Debug.AddWatch " + local.Key);
+        }
+
+        private Color GetFontColorFromOptions() {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var vsShell = (IVsShell) ServiceProvider.GlobalProvider.GetService(typeof(IVsShell));
+            Guid packageGuid = new Guid(InlineLocalsPackage.PackageGuidString);
+            if (vsShell.IsPackageLoaded(ref packageGuid, out var myPackage)
+                == Microsoft.VisualStudio.VSConstants.S_OK) {
+                InlineLocalsPackage inlineLocalsPackage = (InlineLocalsPackage)myPackage;
+                return inlineLocalsPackage.ColorOption;
+            }
+
+            return Colors.LightGray;
         }
     }
 }
