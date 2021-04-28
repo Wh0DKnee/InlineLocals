@@ -52,8 +52,10 @@ namespace InlineLocals
             if(fileName != stackFrame.FileName) { // debugger is currently not in the file attached to this tagger
                 return;
             }
-
+            
             EnvDTE.Expressions locals = stackFrame.Locals;
+
+            bool isLangCSharp = stackFrame.Language.Contains("#");
 
             TagSpans.Clear();
 
@@ -69,7 +71,7 @@ namespace InlineLocals
             for(int i = startLineIndex; i <= lastLineIndex; ++i) {
                 ITextSnapshotLine textSnapshotLine = Buffer.CurrentSnapshot.GetLineFromLineNumber(i);
                 string debugString = textSnapshotLine.GetText();
-                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(locals, textSnapshotLine, longestLineWidth);
+                TagSpan<WatchTag> tagSpan = CreateTagSpanForLine(locals, isLangCSharp, textSnapshotLine, longestLineWidth);
                 if(!(tagSpan is null)) {
                     TagSpans.Add(tagSpan);
                 }
@@ -96,7 +98,11 @@ namespace InlineLocals
         }
 
         private int GetFunctionStartLineIndex(StackFrame2 stackFrame) {
-            Regex regex = new Regex(stackFrame.FunctionName + @"[\t\s]*\(.*\)[\t\s]*\{");
+            string[] stringSeparators = new string[] {".", "::"};
+            string[] functionNameStrings = stackFrame.FunctionName.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
+            // remove stuff like namespace, class name, application name, we only want the actual function name.
+            string actualFunctionName = functionNameStrings[functionNameStrings.Length - 1];
+            Regex regex = new Regex(actualFunctionName + @"[\t\s]*\(.*\)[\t\s]*\{");
 
             int currentLineIndex = (int)stackFrame.LineNumber - 1; // stack frame line number starts at 1, snapshot line numbers a 0, hence the -1
             string sourceString = "";
@@ -116,21 +122,29 @@ namespace InlineLocals
         }
 
         private string[] GetWords(string sourceText) {
-            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";", "-", "+", "/", "*", "," };
+            string[] stringSeparators = new string[] {" ", "(", ")", "[", "]", "{", "}", "\t", ";", "-", "+", "/", "*", "%",
+                "+=", "-=", "%=", "?", ":", "<", ">", "<=", ">=", "==",",", "<<", ">>", "||", "&&", "|", "&", "^" };
+            sourceText = sourceText.Replace("->", "."); // hack to get around "->" being split, because we have "-" as a separator
+            // leads to "this->member" being displayed as "this.member", fix this somehow.
             return sourceText.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, ITextSnapshotLine snapshotLine, int longestLineWidth) {
+        private TagSpan<WatchTag> CreateTagSpanForLine(EnvDTE.Expressions locals, bool isLangCSharp, ITextSnapshotLine snapshotLine, int longestLineWidth) {
             Dictionary<string, LocalInfo> localsDict = new Dictionary<string, LocalInfo>();
             // TODO: allow duplicates (happens if you have two recursive calls in a function, say "return func(x-1)*func(x-2);")
 
             string lineText = snapshotLine.GetText();
             string[] words = GetWords(lineText);
+
             foreach (string word in words) {
                 string value;
                 string type;
                 if (Contains(locals, word, out value, out type)) { // TODO: also check for word + "returned" to display values returned by function call.
                     localsDict[word] = new LocalInfo(value, type); // may override previous occurence, TODO: handle this (see above comment about when this occurs)
+                }
+                string thisString = isLangCSharp ? "this." : "this->";
+                if (Contains(locals, thisString + word, out value, out type)) { // also search for current member variables
+                    localsDict[thisString + word] = new LocalInfo(value, type); 
                 }
             }
             if (localsDict.Count == 0) {
