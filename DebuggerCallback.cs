@@ -61,12 +61,9 @@ namespace InlineLocals
                 Console.WriteLine("CurrentStackFrame is not a StackFrame2.");
                 return VSConstants.E_UNEXPECTED;
             }
-            EnvDTE.Expressions locals = stackFrame.Locals;
-            foreach (EnvDTE.Expression local in locals) {
-                //EnvDTE.Expressions members = local.Name;
-            }
+            EnvDTE.Expressions locals = stackFrame.Locals2[true]; // TODO: understand what the boolean (allowautofunceval) does
 
-            if(LocalsChanged()) {
+            if (LocalsChanged()) {
                 LocalsChangedEvent(this, stackFrame);
             }
 

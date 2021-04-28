@@ -139,6 +139,7 @@ namespace InlineLocals
             foreach (string word in words) {
                 string value;
                 string type;
+                // TODO: create a set of locals so we can early out fast and dont have to iterate over all of them each time.
                 if (Contains(locals, word, out value, out type)) { // TODO: also check for word + "returned" to display values returned by function call.
                     localsDict[word] = new LocalInfo(value, type); // may override previous occurence, TODO: handle this (see above comment about when this occurs)
                 }
